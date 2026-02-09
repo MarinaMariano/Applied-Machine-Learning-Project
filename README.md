@@ -59,7 +59,7 @@ This section reports the preprocessing steps used for this model.
 
 ### **Data augmentation applied just for the Custom CNN, Yen & Tsao**
 
-Random transformations such as horizontal flipping, rotation, and zoom are applied to the chest-x ray dataset, to improve generalization and reduce overfitting. io non ho fatto augemntation, Luke se tu vuoi scrivici quello che hai fatto tu.
+
 ----
 
 ## **Model architecture**
