@@ -57,7 +57,7 @@ The same preprocessing pipeline is applied to both training and test images.
 This section reports the preprocessing steps used for this model.
 
 
-### **Data augmentation applied just for the Custom CNN (Yen & Tsao)**
+### **Data augmentation applied just for the Custom CNN, Yen & Tsao**
 
 Random transformations such as horizontal flipping, rotation, and zoom are applied to the chest-x ray dataset, to improve generalization and reduce overfitting. io non ho fatto augemntation, Luke se tu vuoi scrivici quello che hai fatto tu.
 ----
@@ -116,8 +116,12 @@ Accuracy, MCC and the standard statistical measures are used for general perform
 
 ## **Training strategy**
 
-Supervised training is performed using the training set and monitored on the validation set. Early Stopping is applied to prevent overfitting.
+### **Training of the Pretrained DenseNet-121**
+Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
+Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
 
+### **Training of the Custom CNN, Yen & Tsao**
+Supervised training is performed using the training set and monitored on the validation set. Early Stopping is applied to prevent overfitting.
 Training Configuration
 - Optimizer: Adam
 - Loss: Binary Crossentropy
@@ -127,7 +131,11 @@ Training Configuration
 
 ### **Final evaluation**
 
-The trained model is evaluated on the unseen test set. Final performance metrics are reported.
+#### **of the Pretrained DenseNet-121**
+On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
+Threshold-free metrics (AUROC and AUPRC) are first computed from predicted probabilities to assess ranking performance. Error analysis is further supported by explicitly identifying false positives and false negatives at the image level. Results show strong discriminative performance (AUROC 0.985, AUPRC 0.990) and a recall-oriented behavior for the PNEUMONIA class (recall 0.987), minimizing false negatives.
+
+#### **of the Custom CNN, Yen & Tsao**
 
 ### **Reproducibility**
 
