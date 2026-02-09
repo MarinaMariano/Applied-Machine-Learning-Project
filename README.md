@@ -23,7 +23,7 @@ The backbone is kept fixed (non-trainable) and only the new classification head 
 
 ## **Dataset organization**
 
-The Chest X-ray dataset is a folder that contains two subdirectories, train and test and inside each split, images are organized into class-specific folders named `NORMAL` (chest X-rays from healthy subjects, showing clear lung fields without visible signs of infection or abnormal opacitie) and `PNEUMONIA`(chest X-rays from patients diagnosed with pneumonia, characterized by radiographic patterns such as lung infiltrates, consolidations, or increased opacity). In total, the dataset contains 5,856 images.
+The Chest X-ray dataset is a folder that contains two subdirectories, train and test and inside each split, images are organized into class-specific folders named `NORMAL` and `PNEUMONIA`. In total, the dataset contains 5,856 images.
 
 ### **Train / Validation / Test split**
 The dataset is divided into training, validation and test sets. The validation set is obtained by the initial training set that was randomly shuffled and split using an 80/20 ratio to avoid data leakage. The test set is used exclusively for final model evaluation.
