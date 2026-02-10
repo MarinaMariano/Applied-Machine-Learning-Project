@@ -135,46 +135,47 @@ Threshold-free metrics (AUROC and AUPRC) are first computed from predicted proba
 |---|---:|
 | F1-score | 0.955 |
 | MCC | 0.877 |
-| AUROC | 0.XXX |
-| AUPRC | 0.XXX |
-
-Let **TP**, **TN**, **FP**, **FN** be the entries of the confusion matrix.
-
-### F1-score
-\[
-\text{Precision}=\frac{TP}{TP+FP},\quad \text{Recall}=\frac{TP}{TP+FN}
-\]
-\[
-\text{F1}=\frac{2\cdot \text{Precision}\cdot \text{Recall}}{\text{Precision}+\text{Recall}}
-=\frac{2TP}{2TP+FP+FN}
-\]
-
-### Matthews Correlation Coefficient (MCC)
-\[
-\text{MCC}=\frac{TP\cdot TN - FP\cdot FN}{\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}
-\]
-
-### AUROC
-Define:
-\[
-\text{TPR}=\frac{TP}{TP+FN},\quad \text{FPR}=\frac{FP}{FP+TN}
-\]
-AUROC is the **area under the ROC curve**, i.e. the integral of TPR as a function of FPR when sweeping the decision threshold:
-\[
-\text{AUROC}=\int_{0}^{1}\text{TPR}(\text{FPR})\, d(\text{FPR})
-\]
-
-### AUPRC
-Define:
-\[
-\text{Precision}=\frac{TP}{TP+FP},\quad \text{Recall}=\frac{TP}{TP+FN}
-\]
-AUPRC is the **area under the Precision–Recall curve**, i.e. the integral of Precision as a function of Recall when sweeping the decision threshold:
-\[
-\text{AUPRC}=\int_{0}^{1}\text{Precision}(\text{Recall})\, d(\text{Recall})
-\]
+| AUROC | 0.9848 |
+| AUPRC | 0.9899 |
 
 
+|                  | Predicted PNEUMONIA | Predicted NORMAL |
+|------------------|-------------------:|-----------------:|
+| Actual PNEUMONIA | 385                | 5                |
+| Actual NORMAL    | 36                 | 198              |
+
+
+
+Let:
+- TP = true positives  
+- TN = true negatives  
+- FP = false positives  
+- FN = false negatives  
+
+- F1-score
+Precision = TP / (TP + FP)  
+Recall = TP / (TP + FN)  
+
+F1 = 2 · (Precision · Recall) / (Precision + Recall)  
+   = 2·TP / (2·TP + FP + FN)
+
+- Matthews Correlation Coefficient (MCC)
+
+MCC = (TP·TN − FP·FN) / sqrt((TP+FP)(TP+FN)(TN+FP)(TN+FN))
+
+- AUROC
+
+TPR (True Positive Rate) = TP / (TP + FN)  
+FPR (False Positive Rate) = FP / (FP + TN)  
+
+AUROC is the area under the ROC curve, obtained by plotting TPR versus FPR while sweeping the decision threshold.
+
+- AUPRC
+
+Precision = TP / (TP + FP)  
+Recall = TP / (TP + FN)  
+
+AUPRC is the area under the Precision–Recall curve, obtained by plotting Precision versus Recall while sweeping the decision threshold.
 
 #### **Of the Custom CNN, Yen & Tsao**
 
