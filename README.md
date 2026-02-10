@@ -127,18 +127,56 @@ Training Configuration
 
 ### **Final evaluation**
 
-### **Of the Pretrained DenseNet-121**
+#### **Of the Pretrained DenseNet-121**
 On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
 Threshold-free metrics (AUROC and AUPRC) are first computed from predicted probabilities to assess ranking performance. Error analysis is further supported by explicitly identifying false positives and false negatives at the image level. Results show strong discriminative performance (AUROC 0.985, AUPRC 0.990) and a recall-oriented behavior for the PNEUMONIA class (recall 0.987), minimizing false negatives.
 
-
 | Metric | Value |
-|--------|-------|
+|---|---:|
 | F1-score | 0.955 |
 | MCC | 0.877 |
+| AUROC | 0.XXX |
+| AUPRC | 0.XXX |
+
+Let **TP**, **TN**, **FP**, **FN** be the entries of the confusion matrix.
+
+### F1-score
+\[
+\text{Precision}=\frac{TP}{TP+FP},\quad \text{Recall}=\frac{TP}{TP+FN}
+\]
+\[
+\text{F1}=\frac{2\cdot \text{Precision}\cdot \text{Recall}}{\text{Precision}+\text{Recall}}
+=\frac{2TP}{2TP+FP+FN}
+\]
+
+### Matthews Correlation Coefficient (MCC)
+\[
+\text{MCC}=\frac{TP\cdot TN - FP\cdot FN}{\sqrt{(TP+FP)(TP+FN)(TN+FP)(TN+FN)}}
+\]
+
+### AUROC
+Define:
+\[
+\text{TPR}=\frac{TP}{TP+FN},\quad \text{FPR}=\frac{FP}{FP+TN}
+\]
+AUROC is the **area under the ROC curve**, i.e. the integral of TPR as a function of FPR when sweeping the decision threshold:
+\[
+\text{AUROC}=\int_{0}^{1}\text{TPR}(\text{FPR})\, d(\text{FPR})
+\]
+
+### AUPRC
+Define:
+\[
+\text{Precision}=\frac{TP}{TP+FP},\quad \text{Recall}=\frac{TP}{TP+FN}
+\]
+AUPRC is the **area under the Precision–Recall curve**, i.e. the integral of Precision as a function of Recall when sweeping the decision threshold:
+\[
+\text{AUPRC}=\int_{0}^{1}\text{Precision}(\text{Recall})\, d(\text{Recall})
+\]
 
 
-### **Of the Custom CNN, Yen & Tsao**
+
+#### **Of the Custom CNN, Yen & Tsao**
 
 ### **Reproducibility**
 
