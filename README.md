@@ -20,7 +20,6 @@ The backbone is kept fixed (non-trainable) and only the new classification head 
 
 ## Project Pipeline
 
-
 ## **Dataset organization**
 
 The Chest X-ray dataset is a folder that contains two subdirectories, train and test and inside each split, images are organized into class-specific folders named `NORMAL` and `PNEUMONIA`. In total, the dataset contains 5,856 images.
@@ -50,20 +49,11 @@ The dataset is divided into training, validation and test sets. The validation s
 
 ## **Image Preprocessing – Pretrained DenseNet-121**
 
-For the pretrained DenseNet-121 model, image preprocessing follows the standardized pipeline provided by TorchXRayVision, ensuring compatibility with the pretrained weights. Images are converted to grayscale and transformed into tensors with shape [1, H, W]. Pixel values are rescaled to [0, 255] and normalized using xrv.datasets.normalize with a maximum value of 255, producing intensity values in the range **[-1024, 1024]. A **center crop** (XRayCenterCrop) is applied, followed by resizing to **224 × 224 pixels** (XRayResizer). The final output is a float tensor with shape [1, 224, 224]`.
+For the pretrained DenseNet-121 model, image preprocessing follows the standardized pipeline provided by TorchXRayVision, ensuring compatibility with the pretrained weights. Images are converted to grayscale and transformed into tensors with shape [1, H, W]. Pixel values are rescaled to [0, 255] and normalized using xrv.datasets.normalize with a maximum value of 255, producing intensity values in the range **[-1024, 1024]**. A **center crop** (XRayCenterCrop) is applied, followed by resizing to **224 × 224 pixels** (XRayResizer). The final output is a float tensor with shape [1, 224, 224]`.
 The same preprocessing pipeline is applied to both training and test images.
 
-## **Image Preprocessing – Custom CNN (Yen & Tsao)**
-This section reports the preprocessing steps used for this model.
+## **Image Preprocessing – Custom CNN (Yen & Tsao Inspired)**
 
-
-### **Data augmentation applied just for the Custom CNN, Yen & Tsao**
-
-
-----
-
-## **Model architecture**
-Image Preprocessing – Custom CNN (Yen & Tsao Inspired)
 Data Preprocessing and Augmentation
 
 All chest X-ray images were resized to 192 × 192 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
@@ -74,10 +64,28 @@ All chest X-ray images were resized to 192 × 192 pixels and normalized to the r
 
 No augmentation was applied to validation or test datasets. Given the inherent class imbalance of the chest X-ray dataset, class weights were computed and applied during training to balance the contribution of minority and majority classes in the loss function.
 
-Model Architecture
+
+----
+
+
+### **First model: Pretrained DenseNet-121**
+Transfer learning formalizes a two-phase learning framework: a pre-training phase to capture knowledge from one or more source tasks, and a fine-tuning stage to transfer the captured knowledge to target tasks. 
+We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
+
+----
+
+## **Training strategy**
+
+### **Training of the Pretrained DenseNet-121**
+Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
+Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
+
+----
+
+## Model Architecture
 Custom CNN Inspired by Yen & Tsao (2024)
 
-We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation introduces residual connections and batch normalization to improve training stability and gradient flow.
+We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation additional reduce the structure to obtain a new balance between performance and model lightweight.
 
 The architecture is composed of:
 
@@ -88,7 +96,6 @@ The architecture is composed of:
 1. Feature Extraction (FE Module)
 
 The Feature Extraction module is designed to efficiently learn hierarchical spatial features while maintaining computational efficiency.
-
 Each FE block follows a residual structure composed of:
 
 - 3×3 Convolution (no bias)
@@ -105,9 +112,9 @@ If the number of input channels differs from the number of output filters, a 1×
 
 The FE module follows a residual learning formulation:
 
-\[
+\
 H(x) = F(x) + x
-\]
+\
 
 where:
 
@@ -132,11 +139,7 @@ The network therefore learns increasingly complex representations of pulmonary s
 
 3. Classification Head
 
-After the final FE module, spatial dimensions are reduced using: Global Average Pooling
-
-This operation:
-
-Replaces traditional flattening, Reduces the number of parameters, Acts as structural regularization and preserves channel-wise feature importance
+After the final FE module, spatial dimensions are reduced using, global Average Pooling. This operation replaces traditional flattening, Reduces the number of parameters, Acts as structural regularization and preserves channel-wise feature importance. 
 
 The classification head consists of:
 
@@ -158,28 +161,7 @@ Learning rate reduction on plateau
 
 Mixed precision training (float16 computation with float32 output) was used to reduce memory usage while preserving numerical stability.
 
-
-
-### **Second model: Pretrained DenseNet-121**
-Transfer learning formalizes a two-phase learning framework: a pre-training phase to capture knowledge from one or more source tasks, and a fine-tuning stage to transfer the captured knowledge to target tasks. 
-We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
-
 ----
-
-## **Training strategy**
-
-### **Training of the Pretrained DenseNet-121**
-Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
-Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
-
-### **Training of the Custom CNN, Yen & Tsao**
-Supervised training is performed using the training set and monitored on the validation set. Early Stopping is applied to prevent overfitting.
-Training Configuration
-- Optimizer: Adam
-- Loss: Binary Crossentropy
-- Batch size: 16
-- Epochs : da definire
-- Early stopping (patience: 5)
 
 ### **Final evaluation**
 
@@ -234,6 +216,8 @@ Recall = TP / (TP + FN)
 AUPRC is the area under the Precision–Recall curve, obtained by plotting Precision versus Recall while sweeping the decision threshold.
 
 #### **Of the Custom CNN, Yen & Tsao**
+
+
 
 ### **Reproducibility**
 
