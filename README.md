@@ -112,9 +112,9 @@ If the number of input channels differs from the number of output filters, a 1×
 
 The FE module follows a residual learning formulation:
 
-\
+[\
 H(x) = F(x) + x
-\
+\]
 
 where:
 
