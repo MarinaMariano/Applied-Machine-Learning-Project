@@ -63,45 +63,101 @@ This section reports the preprocessing steps used for this model.
 ----
 
 ## **Model architecture**
-### **First model: Custom CNN, Yen & Tsao**
-We adopted the same model architecture based on a lightweight convolutional neural 
-network inspired by the one proposed by Yen and Tsao (2024), specifcillay designed for chest X-ray classification (which consisted of a redesigned feature extraction (FE) module and multiscale feature (MF) module and validated using publicly available COVID-19 datasets).
-The proposed CNN architecture is composed, indeed, of two main feature extraction stages, followed by a classification head. Scrivi qualcosa in aggiunta e che sia specifico.
+Image Preprocessing – Custom CNN (Yen & Tsao Inspired)
+Data Preprocessing and Augmentation
 
-#### 1. Feature Extraction (FE Module)
+All chest X-ray images were resized to 192 × 192 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
 
-The Feature Extraction (FE) module is designed to efficiently extract local spatial features while reducing redundancy. Structure:
+- Random horizontal flipping
+- Small random rotations (±5%)
+- Mild random zooming (±5%)
 
-- **1×1 Convolution**
-- **Channel Split** (A portion of channels is kept unchanged,The remaining channels undergo further processing)
-- **Depthwise 3×3 Convolution** (Captures local spatial patterns, Lightweight compared to standard convolutions)
-- **1×1 Convolution** (Recombines channel information)
-- **Concatenation** (Merges processed and unprocessed channel branches)
-- **Residual Connection**
+No augmentation was applied to validation or test datasets. Given the inherent class imbalance of the chest X-ray dataset, class weights were computed and applied during training to balance the contribution of minority and majority classes in the loss function.
 
-#### 2. Multi-scale Feature Module (MF Module)
+Model Architecture
+Custom CNN Inspired by Yen & Tsao (2024)
 
-The Multi-scale Feature (MF) module captures contextual information at different spatial scales. Structure:
+We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation introduces residual connections and batch normalization to improve training stability and gradient flow.
 
-- Parallel Max Pooling branches with different receptive fields, pool sizes: 2×2, 4×4, 8×8
-- Depthwise Dilated Convolutions, Different dilation rates per branch Capture both local and global context
-- 1×1 Convolutions
-- Align channel dimensions
--Concatenation Combines multi-scale representations
--Final 1×1 Convolution
+The architecture is composed of:
 
-#### **3. Classification Head**
+- Stacked Feature Extraction (FE) modules
+- Progressive spatial downsampling
+- A lightweight classification head
 
-After feature extraction, the network uses a lightweight classification head:
+1. Feature Extraction (FE Module)
 
-- Global Average Pooling Reduces spatial dimensions Prevents overfitting
-- Fully Connected Layer (128 units, ReLU)
-- Dropout (0.5)
-- Regularization
+The Feature Extraction module is designed to efficiently learn hierarchical spatial features while maintaining computational efficiency.
+
+Each FE block follows a residual structure composed of:
+
+- 3×3 Convolution (no bias)
+- Batch Normalization
+- ReLU activation
+- 3×3 Convolution (no bias)
+- Batch Normalization
+- Residual shortcut connection
+- Final ReLU activation
+
+If the number of input channels differs from the number of output filters, a 1×1 convolution with batch normalization is applied to the shortcut path to align dimensions.
+
+### Residual Formulation
+
+The FE module follows a residual learning formulation:
+
+\[
+H(x) = F(x) + x
+\]
+
+where:
+
+- \(F(x)\) represents the learned transformation  
+- \(x\) is the identity shortcut connection  
+- \(H(x)\) is the output of the residual block  
+
+This formulation improves gradient flow, stabilizes training, and mitigates the vanishing gradient problem.
+Three FE modules with increasing filter depth (32 → 64 → 128) are stacked, with max-pooling layers between them to progressively reduce spatial resolution and increase receptive field.
+
+2. Progressive Spatial Downsampling
+
+After the first and second FE modules, MaxPooling layers are applied to reduce spatial resolution.
+
+This enables:
+
+- Increased receptive field
+- Reduced computational load
+- More abstract feature representation
+
+The network therefore learns increasingly complex representations of pulmonary structures, opacities, and pathological patterns across layers.
+
+3. Classification Head
+
+After the final FE module, spatial dimensions are reduced using: Global Average Pooling
+
+This operation:
+
+Replaces traditional flattening, Reduces the number of parameters, Acts as structural regularization and preserves channel-wise feature importance
+
+The classification head consists of:
+
+- Fully Connected Layer (128 units, ReLU activation)
+- Dropout (0.5) for regularization
 - Output Layer: 1 neuron with Sigmoid activation
-- Binary classification
+- The sigmoid output produces a probability score for binary classification (Normal vs Pneumonia).
 
-Reference: Yen, C.-T., & Tsao, C.-Y. (2024). Lightweight convolutional neural network for chest X-ray images classification. Scientific Reports, 14, 29759. https://doi.org/10.1038/s41598-024-80826-z
+Regularization and Optimization Strategy
+
+To ensure stable convergence and prevent overfitting, the following strategies were adopted:
+- Batch Normalization after each convolution
+- Dropout (0.5)
+- Class-weighted binary cross-entropy
+- Adam optimizer (learning rate = 1e-4)
+- Early stopping based on validation loss
+
+Learning rate reduction on plateau
+
+Mixed precision training (float16 computation with float32 output) was used to reduce memory usage while preserving numerical stability.
+
 
 
 ### **Second model: Pretrained DenseNet-121**
