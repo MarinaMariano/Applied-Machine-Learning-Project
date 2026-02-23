@@ -85,7 +85,7 @@ Nneg​/Npos​<1, indicating a relative over-representation of positive samples
 ## Model Architecture
 Custom CNN Inspired by Yen & Tsao (2024)
 
-We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation additional reduce the structure to obtain a new balance between performance and model lightweight.
+We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-Ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation additional reduce the structure to obtain a new balance between performance and model lightweight.
 
 The architecture is composed of:
 
@@ -94,7 +94,6 @@ The architecture is composed of:
 - A lightweight classification head
 
 1. Feature Extraction (FE Module)
-
 The Feature Extraction module is designed to efficiently learn hierarchical spatial features while maintaining computational efficiency.
 Each FE block follows a residual structure composed of:
 
