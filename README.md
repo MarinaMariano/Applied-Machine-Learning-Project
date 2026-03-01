@@ -56,7 +56,7 @@ The same preprocessing pipeline is applied to both training and test images.
 
 Data Preprocessing and Augmentation
 
-All chest X-ray images were resized to 192 × 192 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
+All chest X-ray images were resized to 128 × 128 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
 
 - Random horizontal flipping
 - Small random rotations (±5%)
@@ -67,12 +67,10 @@ No augmentation was applied to validation or test datasets. Given the inherent c
 
 ----
 
-
 ### **First model: Pretrained DenseNet-121**
 Transfer learning formalizes a two-phase learning framework: a pre-training phase to capture knowledge from one or more source tasks, and a fine-tuning stage to transfer the captured knowledge to target tasks. 
 We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
 
-----
 
 ## **Training strategy**
 
@@ -82,89 +80,62 @@ Nneg​/Npos​<1, indicating a relative over-representation of positive samples
 
 ----
 
-## Model Architecture
-Custom CNN Inspired by Yen & Tsao (2024)
+## **Second Model: Custom CNN (Evolution of Yen & Tsao, 2024)**
 
-We adopted a lightweight convolutional neural network inspired by the architecture proposed by Yen and Tsao (2024), originally designed for efficient chest X-Ray classification. While preserving the core philosophy of efficient feature extraction and low computational cost, our implementation additional reduce the structure to obtain a new balance between performance and model lightweight.
+Our architecture evolves the lightweight philosophy proposed by Yen and Tsao (2024), introducing a specialized Multi-Feature (MF) Fusion layer and optimized Feature Extraction (FE) modules. The model is specifically engineered for chest X-Ray classification, balancing high-order spatial features with low computational overhead through channel-splitting and dilated convolutions.
+The architecture is organized into three phases:
+- Efficient Feature Extraction (FE Modules) using depthwise-separable split-channels.
+- Multi-Scale Feature Fusion (MF Module) for global and local context.
+- Regularized Classification Head for robust binary inference.
 
-The architecture is composed of:
+### **1. Feature Extraction (FE Module) with Split-Channel Strategy**  
 
-- Stacked Feature Extraction (FE) modules
-- Progressive spatial downsampling
-- A lightweight classification head
+The FE module focuses on learning hierarchical spatial features while minimizing parameter count. To achieve this, we implemented a Channel-Splitting approach:
 
-1. Feature Extraction (FE Module)
-The Feature Extraction module is designed to efficiently learn hierarchical spatial features while maintaining computational efficiency.
-Each FE block follows a residual structure composed of:
+- Input Transformation: The input tensor is passed through a 1×1 convolution to adjust depth.
+- Channel Split: The feature map is split into two branches ($x_1$ and $x_2$).
+- Depthwise Processing: While $x_1$ acts as a partial identity, $x_2$ undergoes a 3×3 Depthwise Convolution. 
 
-- 3×3 Convolution (no bias)
-- Batch Normalization
-- ReLU activation
-- 3×3 Convolution (no bias)
-- Batch Normalization
-- Residual shortcut connection
-- Final ReLU activation
+This operation applies a single filter per input channel, drastically reducing the FLOPs (Floating Point Operations) compared to standard convolutions.
+Recombination: The branches are concatenated, followed by a residual shortcut connection.
+Residual Formulation:
 
-If the number of input channels differs from the number of output filters, a 1×1 convolution with batch normalization is applied to the shortcut path to align dimensions.
+$$H(x) = \text{ReLU}(F(x) + \text{shortcut}(x))$$
 
-### Residual Formulation
+where $F(x)$ incorporates the split-channel transformation, stabilizing gradient flow and mitigating the vanishing gradient problem in deep medical imaging tasks.
 
-The FE module follows a residual learning formulation:
+### **2. Multi-Feature Fusion (MF Module)** 
 
-[\
-H(x) = F(x) + x
-\]
 
-where:
+To address the variable size of pathological patterns in pneumonia (from small focal opacities to large lobar consolidations), we introduced a Multi-Feature (MF) Module.This module utilizes Dilated Convolutions to capture features at multiple receptive fields without increasing the number of parameters or losing spatial resolution:
 
-- \(F(x)\) represents the learned transformation  
-- \(x\) is the identity shortcut connection  
-- \(H(x)\) is the output of the residual block  
+- Parallel Dilated Branches: Three parallel 3×3 Depthwise Convolutions with dilation rates of 1, 2, and 4.
+- Feature Aggregation: The outputs are concatenated to fuse fine-grained textures with broader structural context.
+- Dimensionality Reduction: A final 1×1 convolution compresses the fused features before the final classification stage.
 
-This formulation improves gradient flow, stabilizes training, and mitigates the vanishing gradient problem.
-Three FE modules with increasing filter depth (32 → 64 → 128) are stacked, with max-pooling layers between them to progressively reduce spatial resolution and increase receptive field.
+### **3. Classification Head & Structural Regularization**
 
-2. Progressive Spatial Downsampling
+Following the final feature extraction, we utilize Global Average Pooling (GAP). Unlike traditional flattening, GAP reduces the total parameter count and acts as a structural regularizer by enforcing a direct correspondence between feature maps and the classification output.
+The head consists of:
 
-After the first and second FE modules, MaxPooling layers are applied to reduce spatial resolution.
+Dense Layer: 96 units with ReLU activation.
+Dropout (0.5): To prevent co-adaptation of neurons and ensure generalization to unseen datasets.
+Output Layer: A single neuron with Sigmoid activation, providing the probability score for binary classification (Normal vs. Pneumonia).
 
-This enables:
+### **4. Optimization & Regularization Strategy**
 
-- Increased receptive field
-- Reduced computational load
-- More abstract feature representation
-
-The network therefore learns increasingly complex representations of pulmonary structures, opacities, and pathological patterns across layers.
-
-3. Classification Head
-
-After the final FE module, spatial dimensions are reduced using, global Average Pooling. This operation replaces traditional flattening, Reduces the number of parameters, Acts as structural regularization and preserves channel-wise feature importance. 
-
-The classification head consists of:
-
-- Fully Connected Layer (128 units, ReLU activation)
-- Dropout (0.5) for regularization
-- Output Layer: 1 neuron with Sigmoid activation
-- The sigmoid output produces a probability score for binary classification (Normal vs Pneumonia).
-
-Regularization and Optimization Strategy
-
-To ensure stable convergence and prevent overfitting, the following strategies were adopted:
-- Batch Normalization after each convolution
-- Dropout (0.5)
-- Class-weighted binary cross-entropy
-- Adam optimizer (learning rate = 1e-4)
-- Early stopping based on validation loss
-
-Learning rate reduction on plateau
-
-Mixed precision training (float16 computation with float32 output) was used to reduce memory usage while preserving numerical stability.
+To ensure convergence and prevent overfitting on the imbalanced Chest X-Ray dataset, we adopted a multi-layered optimization strategy:
+- L2 Regularization: A penalty of $0.001$ is applied to all kernels and depthwise kernels to enforce weight decay.
+- Label Smoothing (0.1): Instead of "hard" 0/1 targets, we use smoothed labels to improve model calibration and prevent overconfidence.
+- Weighted Binary Cross-Entropy: Class weights (manually tuned or balanced) are applied to the loss function to compensate for the higher frequency of pneumonia cases.
+- Optimization: The Adam optimizer is paired with a ReduceLROnPlateau scheduler (factor 0.2, patience 5) to fine-tune weights as the validation loss plateaus.
+- Mixed Precision: Training is conducted using float16 computation (with float32 master weights) to maximize GPU efficiency on Google Colab.
 
 ----
 
 ### **Final evaluation**
 
-#### **Of the Pretrained DenseNet-121**
+#### **Pretrained DenseNet-121**
 On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
 Threshold-free metrics (AUROC and AUPRC) are first computed from predicted probabilities to assess ranking performance. Error analysis is further supported by explicitly identifying false positives and false negatives at the image level. Results show strong discriminative performance (AUROC 0.985, AUPRC 0.990) and a recall-oriented behavior for the PNEUMONIA class (recall 0.987), minimizing false negatives.
 
@@ -180,6 +151,31 @@ Threshold-free metrics (AUROC and AUPRC) are first computed from predicted proba
 |------------------|-------------------:|-----------------:|
 | Actual PNEUMONIA | 385                | 5                |
 | Actual NORMAL    | 36                 | 198              |
+
+
+
+#### **Custom CNN **
+
+On the test set (n=624), the proposed FE-MF architecture achieved a global accuracy of 0.88 and a weighted F1-score of 0.88. The model demonstrated a highly specialized behavior: while maintaining an exceptional precision of 0.98 for the NORMAL class (0.0), it achieved a near-perfect recall of 0.99 for the PNEUMONIA class (1.0).
+
+The decision threshold was strategically set at 0.6 to prioritize clinical safety. In this diagnostic setting, the model successfully minimized False Negatives—the most critical error in medical imaging—ensuring that almost all pneumonia cases (386 out of 390) were correctly identified.
+
+Threshold-free metrics were computed to assess the model's ranking performance. The model reached an AUROC of 0.985 and an AUPRC of 0.990, confirming that the internal feature representations learned by the FE and MF modules are highly discriminative.
+
+By favoring Sensitivity (Recall 0.99) over Specificity, the model adopts a "precautionary" clinical approach. Accepting a higher number of False Positives (68) while keeping False Negatives to a minimum (only 4 cases missed) is considered a safer screening strategy, as suspicious cases can be further reviewed by a radiologist, whereas a missed pneumonia case could lead to untreated progression.
+
+| Metric | Value |
+|---|---:|
+| F1-score | 0.88 |
+| Accuracy | 0.88 |
+| Precision | 0.90 |
+| Recall | 0.88 |
+
+
+|                  | Predicted PNEUMONIA | Predicted NORMAL |
+|------------------|-------------------:|-----------------:|
+| Actual PNEUMONIA | 386                | 4                |
+| Actual NORMAL    | 69                 | 165              |
 
 
 
@@ -214,7 +210,7 @@ Recall = TP / (TP + FN)
 
 AUPRC is the area under the Precision–Recall curve, obtained by plotting Precision versus Recall while sweeping the decision threshold.
 
-#### **Of the Custom CNN, Yen & Tsao**
+#### Conclusions
 
 
 
