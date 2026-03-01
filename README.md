@@ -133,9 +133,9 @@ To ensure convergence and prevent overfitting on the imbalanced Chest X-Ray data
 
 ----
 
-### **Final evaluation**
+#### **Final evaluation**
 
-#### **Pretrained DenseNet-121**
+### **Pretrained DenseNet-121**
 On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
 Threshold-free metrics (AUROC and AUPRC) are first computed from predicted probabilities to assess ranking performance. Error analysis is further supported by explicitly identifying false positives and false negatives at the image level. Results show strong discriminative performance (AUROC 0.985, AUPRC 0.990) and a recall-oriented behavior for the PNEUMONIA class (recall 0.987), minimizing false negatives.
 
@@ -154,7 +154,7 @@ Threshold-free metrics (AUROC and AUPRC) are first computed from predicted proba
 
 
 
-#### **Custom CNN **
+#### **Custom CNN**
 
 On the test set (n=624), the proposed FE-MF architecture achieved a global accuracy of 0.88 and a weighted F1-score of 0.88. The model demonstrated a highly specialized behavior: while maintaining an exceptional precision of 0.98 for the NORMAL class (0.0), it achieved a near-perfect recall of 0.99 for the PNEUMONIA class (1.0).
 
