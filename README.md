@@ -169,7 +169,7 @@ Threshold-free metrics (AUROC and AUPRC) are first computed from predicted proba
 
 
 
-## **Custom CNN**
+### **Custom CNN**
 
 On the test set (n=624), the proposed FE-MF architecture achieved a global accuracy of 0.88 and a weighted F1-score of 0.88. The model demonstrated a highly specialized behavior: while maintaining an exceptional precision of 0.98 for the NORMAL class (0.0), it achieved a near-perfect recall of 0.99 for the PNEUMONIA class (1.0).
 
