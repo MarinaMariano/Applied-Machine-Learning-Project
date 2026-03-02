@@ -18,6 +18,8 @@ The backbone is kept fixed (non-trainable) and only the new classification head 
 
 ----
 
+
+
 ## Project Pipeline
 
 ## **Dataset organization**
@@ -72,9 +74,7 @@ Transfer learning formalizes a two-phase learning framework: a pre-training phas
 We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
 
 
-## **Training strategy**
-
-### **Training of the Pretrained DenseNet-121**
+### **Training Strategy **
 Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
 Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
 
@@ -106,8 +106,7 @@ where $F(x)$ incorporates the split-channel transformation, stabilizing gradient
 
 ### **2. Multi-Feature Fusion (MF Module)** 
 
-
-To address the variable size of pathological patterns in pneumonia (from small focal opacities to large lobar consolidations), we introduced a Multi-Feature (MF) Module.This module utilizes Dilated Convolutions to capture features at multiple receptive fields without increasing the number of parameters or losing spatial resolution:
+To address the variable size of pathological patterns in pneumonia (from small focal opacities to large lobar consolidations), we introduced a Multi-Feature (MF) Module. This module utilizes Dilated Convolutions to capture features at multiple receptive fields without increasing the number of parameters or losing spatial resolution:
 
 - Parallel Dilated Branches: Three parallel 3×3 Depthwise Convolutions with dilation rates of 1, 2, and 4.
 - Feature Aggregation: The outputs are concatenated to fuse fine-grained textures with broader structural context.
@@ -118,9 +117,9 @@ To address the variable size of pathological patterns in pneumonia (from small f
 Following the final feature extraction, we utilize Global Average Pooling (GAP). Unlike traditional flattening, GAP reduces the total parameter count and acts as a structural regularizer by enforcing a direct correspondence between feature maps and the classification output.
 The head consists of:
 
-Dense Layer: 96 units with ReLU activation.
-Dropout (0.5): To prevent co-adaptation of neurons and ensure generalization to unseen datasets.
-Output Layer: A single neuron with Sigmoid activation, providing the probability score for binary classification (Normal vs. Pneumonia).
+- Dense Layer: 96 units with ReLU activation.
+- Dropout (0.5): To prevent co-adaptation of neurons and ensure generalization to unseen datasets.
+- Output Layer: A single neuron with Sigmoid activation, providing the probability score for binary classification (Normal vs. Pneumonia).
 
 ### **4. Optimization & Regularization Strategy**
 
