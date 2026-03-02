@@ -1,5 +1,14 @@
 # A COMPARATIVE STUDY OF COSTUM AND PRETRAINED CNNs FOR CHEST X-RAY ClASSIFICATION
 
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)
+![NumPy](https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-%23F7931E.svg?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![TorchXRayVision](https://img.shields.io/badge/TorchXRayVision-blue?style=for-the-badge)
+![CNN](https://img.shields.io/badge/Architecture-Custom%20CNN-green?style=for-the-badge)
+![DenseNet121](https://img.shields.io/badge/Pretrained-DenseNet121-orange?style=for-the-badge)
+![Transfer Learning](https://img.shields.io/badge/Method-Transfer%20Learning-lightgrey?style=for-the-badge)
 
 ## INTRODUCTION 
 
@@ -18,15 +27,22 @@ The backbone is kept fixed (non-trainable) and only the new classification head 
 
 ----
 
+## Table of Contents
+- [Dataset Organization](#dataset-organization)
+- [Image Preprocessing – Pretrained DenseNet-121](#image-preprocessing--pretrained-densenet-121)
+- [Image Preprocessing – Custom CNN](#image-preprocessing--custom-cnn)
+- [First model: Pretrained DenseNet-121](#first-model-pretrained-densenet-121)
+- [Second Model: Custom CNN](#second-model-custom-cnn)
+- [Final Evaluation](#final-evaluation)
+- [Conclusions](#conclusions)
 
+----
 
-## Project Pipeline
-
-## **Dataset organization**
+## **Dataset Organization**
 
 The Chest X-ray dataset is a folder that contains two subdirectories, train and test and inside each split, images are organized into class-specific folders named `NORMAL` and `PNEUMONIA`. In total, the dataset contains 5,856 images.
 
-### **Train / Validation / Test split**
+### Train / Validation / Test split
 The dataset is divided into training, validation and test sets. The validation set is obtained by the initial training set that was randomly shuffled and split using an 80/20 ratio to avoid data leakage. The test set is used exclusively for final model evaluation.
 
 ### X-Ray Dataset Split (Luca – Custom CNN, Yen & Tsao)                                         
@@ -54,9 +70,9 @@ The dataset is divided into training, validation and test sets. The validation s
 For the pretrained DenseNet-121 model, image preprocessing follows the standardized pipeline provided by TorchXRayVision, ensuring compatibility with the pretrained weights. Images are converted to grayscale and transformed into tensors with shape [1, H, W]. Pixel values are rescaled to [0, 255] and normalized using xrv.datasets.normalize with a maximum value of 255, producing intensity values in the range **[-1024, 1024]**. A **center crop** (XRayCenterCrop) is applied, followed by resizing to **224 × 224 pixels** (XRayResizer). The final output is a float tensor with shape [1, 224, 224]`.
 The same preprocessing pipeline is applied to both training and test images.
 
-## **Image Preprocessing – Custom CNN (Yen & Tsao Inspired)**
+## **Image Preprocessing – Custom CNN**
 
-Data Preprocessing and Augmentation
+### Data Preprocessing and Augmentation
 
 All chest X-ray images were resized to 128 × 128 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
 
@@ -74,13 +90,13 @@ Transfer learning formalizes a two-phase learning framework: a pre-training phas
 We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
 
 
-### **Training Strategy **
+### Training Strategy
 Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
 Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
 
 ----
 
-## **Second Model: Custom CNN (Evolution of Yen & Tsao, 2024)**
+## **Second Model: Custom CNN**
 
 Our architecture evolves the lightweight philosophy proposed by Yen and Tsao (2024), introducing a specialized Multi-Feature (MF) Fusion layer and optimized Feature Extraction (FE) modules. The model is specifically engineered for chest X-Ray classification, balancing high-order spatial features with low computational overhead through channel-splitting and dilated convolutions.
 The architecture is organized into three phases:
@@ -132,7 +148,7 @@ To ensure convergence and prevent overfitting on the imbalanced Chest X-Ray data
 
 ----
 
-#### **Final evaluation**
+## **Final Evaluation**
 
 ### **Pretrained DenseNet-121**
 On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
@@ -153,7 +169,7 @@ Threshold-free metrics (AUROC and AUPRC) are first computed from predicted proba
 
 
 
-#### **Custom CNN**
+## **Custom CNN**
 
 On the test set (n=624), the proposed FE-MF architecture achieved a global accuracy of 0.88 and a weighted F1-score of 0.88. The model demonstrated a highly specialized behavior: while maintaining an exceptional precision of 0.98 for the NORMAL class (0.0), it achieved a near-perfect recall of 0.99 for the PNEUMONIA class (1.0).
 
@@ -209,7 +225,7 @@ Recall = TP / (TP + FN)
 
 AUPRC is the area under the Precision–Recall curve, obtained by plotting Precision versus Recall while sweeping the decision threshold.
 
-#### Conclusions
+## Conclusions
 
 
 
