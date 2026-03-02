@@ -67,14 +67,18 @@ The dataset is divided into training, validation and test sets. The validation s
 
 ## **Image Preprocessing – Pretrained DenseNet-121**
 
-For the pretrained DenseNet-121 model, image preprocessing follows the standardized pipeline provided by TorchXRayVision, ensuring compatibility with the pretrained weights. Images are converted to grayscale and transformed into tensors with shape [1, H, W]. Pixel values are rescaled to [0, 255] and normalized using xrv.datasets.normalize with a maximum value of 255, producing intensity values in the range **[-1024, 1024]**. A **center crop** (XRayCenterCrop) is applied, followed by resizing to **224 × 224 pixels** (XRayResizer). The final output is a float tensor with shape [1, 224, 224]`.
+For the pretrained DenseNet-121 model, image preprocessing follows the standardized pipeline provided by TorchXRayVision, ensuring compatibility with the pretrained weights. 
+- Images are converted to grayscale and transformed into tensors with shape [1, H, W].
+- Pixel values are rescaled to [0, 255] and normalized using xrv.datasets.normalize with a maximum value of 255, producing intensity values in the range **[-1024, 1024]**.
+- A **center crop** (XRayCenterCrop) is applied, followed by resizing to **224 × 224 pixels** (XRayResizer). 
+The final output is a float tensor with shape [1, 224, 224]`.
 The same preprocessing pipeline is applied to both training and test images.
 
 ## **Image Preprocessing – Custom CNN**
 
 ### Data Preprocessing and Augmentation
 
-All chest X-ray images were resized to 128 × 128 pixels and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
+All chest X-ray images were resized to 128 × 128  and normalized to the range [0,1] through rescaling (pixel value / 255). Data augmentation was applied exclusively during training in order to improve generalization and reduce overfitting. The augmentation pipeline included:
 
 - Random horizontal flipping
 - Small random rotations (±5%)
@@ -86,13 +90,21 @@ No augmentation was applied to validation or test datasets. Given the inherent c
 ----
 
 ## **First model: Pretrained DenseNet-121**
+
 Transfer learning formalizes a two-phase learning framework: a pre-training phase to capture knowledge from one or more source tasks, and a fine-tuning stage to transfer the captured knowledge to target tasks. 
-We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a feature extractor, not a classifier. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
+
+We instantiated a DenseNet-121 architecture from the TorchXRayVision (xrv) library. The weights "densenet121-res224-all" indicate pretraining on large-scale chest X-ray datasets, trained with 224×224 input resolution. This backbone acts as a **feature extractor**, not a **classifier**. We move the backbone’s parameters and buffers to the selected compute device so that input tensors and model weights are on the same device. 
+
+We switch the backbone to evaluation mode disableing batch normalization updates, dropout randomness and gradient computation for all backbone parameters. Since the backbone is frozen it acts as a fixed feature extractor. Then we added a task specific binary classification head.
 
 
 ### Training Strategy
-Class imbalance was handled via BCEWithLogitsLoss(pos_weight), computed from the training subset label counts; in our split 
-Nneg​/Npos​<1, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance. Optimization uses Adam (lr = 1e-3) on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone frozen. The learning-rate scheduler (ReduceLROnPlateau) and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
+
+Class imbalance was handled via **BCEWithLogitsLoss(pos_weight)**, computed from the training subset label counts; 
+
+in our split **Nneg​/Npos​ < 1**, indicating a relative over-representation of positive samples. In this setting, the loss weighting counterbalances the natural bias of the optimization process toward the majority class by increasing the penalty associated with misclassified negative examples, thus preventing the classifier from trivially favoring the positive class. Conversely, in the more common case Nneg​/Npos​ >1, the same strategy would up-weight positive samples to mitigate majority-negative dominance.
+
+Optimization uses **Adam (lr = 1e-3)** on the classifier head (model.fc) only, keeping the pretrained DenseNet backbone **frozen**. The learning-rate scheduler **(ReduceLROnPlateau)** and early stopping monitor the validation loss, and the final checkpoint corresponds to the epoch with the lowest val_loss. Performance is also reported with MCC computed from epoch-level TP/TN/FP/FN counts at a fixed threshold of 0.5.
 
 ----
 
@@ -100,9 +112,9 @@ Nneg​/Npos​<1, indicating a relative over-representation of positive samples
 
 Our architecture evolves the lightweight philosophy proposed by Yen and Tsao (2024), introducing a specialized Multi-Feature (MF) Fusion layer and optimized Feature Extraction (FE) modules. The model is specifically engineered for chest X-Ray classification, balancing high-order spatial features with low computational overhead through channel-splitting and dilated convolutions.
 The architecture is organized into three phases:
-- Efficient Feature Extraction (FE Modules) using depthwise-separable split-channels.
-- Multi-Scale Feature Fusion (MF Module) for global and local context.
-- Regularized Classification Head for robust binary inference.
+- **Efficient Feature Extraction (FE Modules)** using depthwise-separable split-channels.
+- **Multi-Scale Feature Fusion (MF Module)** for global and local context.
+- **Regularized Classification Head** for robust binary inference.
 
 ### **1. Feature Extraction (FE Module) with Split-Channel Strategy**  
 
@@ -150,6 +162,38 @@ To ensure convergence and prevent overfitting on the imbalanced Chest X-Ray data
 
 ## **Final Evaluation**
 
+### **Evaluation Metrics**
+
+To evaluate the performance of the models, we use the following standard metrics based on the confusion matrix:
+
+* **TP (True Positives)**: Corrected predicted pneumonia cases.
+* **TN (True Negatives)**: Corrected predicted normal cases.
+* **FP (False Positives)**: Normal cases incorrectly identified as pneumonia.
+* **FN (False Negatives)**: Pneumonia cases incorrectly identified as normal.
+
+#### **1. F1-Score**
+The F1-score is the harmonic mean of Precision and Recall, providing a balance between the two.
+
+$$Precision = \frac{TP}{TP + FP}$$
+
+$$Recall = \frac{TP}{TP + FN}$$
+
+$$F1 = 2 \cdot \frac{Precision \cdot Recall}{Precision + Recall} = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$$
+
+#### **2. Matthews Correlation Coefficient (MCC)**
+MCC is a more reliable statistical rate which produces a high score only if the prediction obtained good results in all of the four confusion matrix categories.
+
+$$MCC = \frac{TP \cdot TN - FP \cdot FN}{\sqrt{(TP + FP)(TP + FN)(TN + FP)(TN+FN)}}$$
+
+#### **3. AUROC & AUPRC**
+These threshold-free metrics evaluate the model's ranking ability across all possible decision thresholds.
+
+* **AUROC** (Area Under the Receiver Operating Characteristic Curve) plots **TPR** vs **FPR**:
+ 
+  $$TPR = \frac{TP}{TP + FN} \quad , \quad FPR = \frac{FP}{FP + TN}$$.
+  
+* **AUPRC** (Area Under the Precision-Recall Curve) plots **Precision** vs **Recall**, which is particularly informative for imbalanced clinical datasets.
+
 ### **Pretrained DenseNet-121**
 On the test set, the model achieved strong performance, with an F1-score of 0.949 and an MCC of 0.861. The confusion matrix shows a limited number of misclassifications, with 36 false positives and only 5 false negatives. The decision threshold was selected on the validation set to maximize the F1-score, favoring sensitivity to pneumonia cases. In this setting, accepting a higher number of false positives while keeping false negatives low can considered a more precautionary and clinically safer approach. 
 Threshold-free metrics (AUROC and AUPRC) are first computed from predicted probabilities to assess ranking performance. Error analysis is further supported by explicitly identifying false positives and false negatives at the image level. Results show strong discriminative performance (AUROC 0.985, AUPRC 0.990) and a recall-oriented behavior for the PNEUMONIA class (recall 0.987), minimizing false negatives.
@@ -193,37 +237,6 @@ By favoring Sensitivity (Recall 0.99) over Specificity, the model adopts a "prec
 | Actual NORMAL    | 69                 | 165              |
 
 
-
-Let:
-- TP = true positives  
-- TN = true negatives  
-- FP = false positives  
-- FN = false negatives  
-
-- F1-score
-Precision = TP / (TP + FP)  
-Recall = TP / (TP + FN)  
-
-F1 = 2 · (Precision · Recall) / (Precision + Recall)  
-   = 2·TP / (2·TP + FP + FN)
-
-- Matthews Correlation Coefficient (MCC)
-
-MCC = (TP·TN − FP·FN) / sqrt((TP+FP)(TP+FN)(TN+FP)(TN+FN))
-
-- AUROC
-
-TPR (True Positive Rate) = TP / (TP + FN)  
-FPR (False Positive Rate) = FP / (FP + TN)  
-
-AUROC is the area under the ROC curve, obtained by plotting TPR versus FPR while sweeping the decision threshold.
-
-- AUPRC
-
-Precision = TP / (TP + FP)  
-Recall = TP / (TP + FN)  
-
-AUPRC is the area under the Precision–Recall curve, obtained by plotting Precision versus Recall while sweeping the decision threshold.
 
 ## Conclusions
 
