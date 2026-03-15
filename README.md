@@ -158,6 +158,9 @@ To ensure convergence and prevent overfitting on the imbalanced Chest X-Ray data
 - Optimization: The Adam optimizer is paired with a ReduceLROnPlateau scheduler (factor 0.2, patience 5) to fine-tune weights as the validation loss plateaus.
 - Mixed Precision: Training is conducted using float16 computation (with float32 master weights) to maximize GPU efficiency on Google Colab.
 
+**Note on Hyperparameter Optimization:**
+While systematic hyperparameter tuning (e.g., Bayesian Optimization or Grid Search) was not performed due to computational constraints on Google Colab, the model utilizes dynamic scheduling via ReduceLROnPlateau. This ensures adaptive learning rate adjustment during training. Future iterations of this study could explore a broader search space for L2 regularization weights and dropout ratios to further refine the balance between precision and recall.
+
 ----
 
 ## **Final Evaluation**
@@ -237,37 +240,39 @@ By favoring Sensitivity (Recall 0.99) over Specificity, the model adopts a "prec
 | Actual NORMAL    | 69                 | 165              |
 
 
+----
 
-## Conclusions
-
-
-This study successfully compared two distinct paradigms for medical image classification: a state-of-the-art pretrained DenseNet-121 and a highly optimized, lightweight custom CNN (FE-MF). Despite the significant difference in parameter count and architectural complexity, both models demonstrated exceptional discriminative power on the Chest X-ray dataset, particularly in identifying pneumonia cases.
-
-Comparative Findings
-Clinical Safety and Recall: Both models prioritized Recall for the PNEUMONIA class (0.987 for DenseNet vs. 0.990 for Custom CNN). This is the most critical metric in a clinical screening context, as it ensures that only 1% of pathological cases were missed. The custom FE-MF architecture proved that a lightweight model, when equipped with specialized modules like Multi-Feature Fusion, can match or even slightly exceed the sensitivity of much larger architectures.
-
-Performance vs. Complexity: The DenseNet-121 provided a more balanced performance, achieving a higher MCC (0.877) and F1-score (0.955) due to its superior specificity (fewer False Positives). However, the Custom CNN achieved nearly identical threshold-free metrics (AUROC 0.985), demonstrating that its learned feature representations are extremely robust despite the smaller footprint.
-
-Efficiency and Adaptation: The project highlighted the practical trade-offs in medical AI. While the pretrained model benefited from knowledge transfer (Transfer Learning), the custom model utilized Depthwise Separable Convolutions and Mixed Precision to remain computationally efficient—a vital requirement for deployment in resource-constrained environments or for scaling to larger datasets like OCT.
-
-Final Remarks
-The results confirm that while Transfer Learning remains a "gold standard" for accuracy, specialized lightweight architectures can achieve clinical-grade sensitivity. The MF Module's ability to capture multi-scale pathological patterns proved instrumental in reaching a 0.99 recall.
-
-Future developments could involve:
-
-Integrating Explainable AI (XAI) tools like Grad-CAM to visualize the specific pulmonary regions driving the FE-MF model's decisions.
-
-Expanding the custom architecture to multi-class classification if computational resources allow for larger dataset processing.
-
-Exploring Ensemble methods that combine the high specificity of DenseNet with the high sensitivity of the Custom FE-MF network to further reduce False Positives without sacrificing recall.
-
-In conclusion, this project demonstrates that through rigorous regularization, class-weighting, and architectural innovation (FE-MF modules), custom-built neural networks can serve as reliable and efficient tools for assisted medical diagnosis.
+### **Conclusions**
 
 
+This study successfully compared two distinct paradigms for medical image classification: a **state-of-the-art pretrained DenseNet-121** and a highly optimized, **lightweight custom CNN (FE-MF)**. Despite the significant difference in parameter count and architectural complexity, both models demonstrated exceptional discriminative power on the Chest X-ray dataset, particularly in identifying pneumonia cases.
 
+## Comparative Findings
 
+## Clinical Safety and Recall
 
-### **Reproducibility**
+Both models prioritized **Recall** for the PNEUMONIA class (0.987 for DenseNet vs. 0.990 for Custom CNN). This is the most critical metric in a clinical screening context, as it ensures that only 1% of pathological cases were missed. The **custom FE-MF** architecture proved that a lightweight model, when equipped with specialized modules like Multi-Feature Fusion, can match or even slightly exceed the sensitivity of much larger architectures.
+
+## Performance vs. Complexity
+
+The DenseNet-121 provided a more **balanced performance**, achieving a **higher MCC** (0.877) and **F1-score** (0.955) due to its superior specificity (fewer False Positives). However, the Custom CNN achieved nearly i**dentical threshold-free metrics** (AUROC 0.985), demonstrating that its learned feature representations are extremely robust despite the smaller footprint.
+
+## Efficiency and Adaptation
+
+The project highlighted the **practical trade-offs in medical AI***. While the pretrained model benefited from knowledge transfer **(Transfer Learning)**, the custom model utilized Depthwise Separable Convolutions and Mixed Precision to remain computationally efficient—a vital requirement for deployment in resource-constrained environments or for scaling to larger datasets like OCT.
+
+As a final remarks the results confirm that while Transfer Learning remains a "gold standard" for accuracy, specialized lightweight architectures can achieve clinical-grade sensitivity. The MF Module's ability to capture multi-scale pathological patterns proved instrumental in reaching a 0.99 recall.
+
+----
+
+## Contacts
+
+Luca Cagnini - luca.cagnini@studio.unibo.it
+Marina Mariano - marina.mariano@studio.unibo.it
+
+----
+
+## **Reproducibility**
 
 Modular and version-controlled codebase suitable for GitHub. The dataset is excluded from the repository using `.gitignore`.
 
