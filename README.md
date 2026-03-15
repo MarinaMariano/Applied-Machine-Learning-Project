@@ -242,22 +242,22 @@ By favoring Sensitivity (Recall 0.99) over Specificity, the model adopts a "prec
 
 ----
 
-### **Conclusions**
+## **Conclusions**
 
 
 This study successfully compared two distinct paradigms for medical image classification: a **state-of-the-art pretrained DenseNet-121** and a highly optimized, **lightweight custom CNN (FE-MF)**. Despite the significant difference in parameter count and architectural complexity, both models demonstrated exceptional discriminative power on the Chest X-ray dataset, particularly in identifying pneumonia cases.
 
-## Comparative Findings
+### Comparative Findings
 
-## Clinical Safety and Recall
+### Clinical Safety and Recall
 
 Both models prioritized **Recall** for the PNEUMONIA class (0.987 for DenseNet vs. 0.990 for Custom CNN). This is the most critical metric in a clinical screening context, as it ensures that only 1% of pathological cases were missed. The **custom FE-MF** architecture proved that a lightweight model, when equipped with specialized modules like Multi-Feature Fusion, can match or even slightly exceed the sensitivity of much larger architectures.
 
-## Performance vs. Complexity
+### Performance vs. Complexity
 
 The DenseNet-121 provided a more **balanced performance**, achieving a **higher MCC** (0.877) and **F1-score** (0.955) due to its superior specificity (fewer False Positives). However, the Custom CNN achieved nearly i**dentical threshold-free metrics** (AUROC 0.985), demonstrating that its learned feature representations are extremely robust despite the smaller footprint.
 
-## Efficiency and Adaptation
+### Efficiency and Adaptation
 
 The project highlighted the **practical trade-offs in medical AI***. While the pretrained model benefited from knowledge transfer **(Transfer Learning)**, the custom model utilized Depthwise Separable Convolutions and Mixed Precision to remain computationally efficient—a vital requirement for deployment in resource-constrained environments or for scaling to larger datasets like OCT.
 
@@ -268,6 +268,7 @@ As a final remarks the results confirm that while Transfer Learning remains a "g
 ## Contacts
 
 Luca Cagnini - luca.cagnini@studio.unibo.it
+
 Marina Mariano - marina.mariano@studio.unibo.it
 
 ----
